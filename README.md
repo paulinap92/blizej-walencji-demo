@@ -1,86 +1,69 @@
-# Bliżej Walencji — Editorial AI Engineering Portfolio Demo
+# Bliżej Walencji · AI Workflow Engineering Case Study
 
-[**Live demonstration**](https://paulinap92.github.io/blizej-walencji-demo/) *(available after the repository is created and Pages is enabled)* · [Production product](https://blizejwalencji.es)
+**Interactive technical portfolio:** [Live demo](https://paulinap92.github.io/blizej-walencji-demo/) · [Real production portal](https://blizejwalencji.es)
 
-> **Safe, independently implemented portfolio demo.** Event records and texts are fictional. It does not perform online discovery, call LLMs, access a CMS or post to any social platform.
+This is an **English-language engineering walkthrough**, not a clone of the Polish-language portal. It demonstrates the technical workflow behind event research and AI-assisted publication using an interactive LangGraph-style state machine, human approval controls, code excerpts and system-boundary tests.
 
-## Authentic product screenshots
+## What you can actually try
 
-Two **real screenshots of the public production homepage**, captured by the project owner with Playwright on **November 26, 2026**, are included in `screenshots/`:
+| Module | Interactive behavior | Architectural interpretation |
+| --- | --- | --- |
+| LangGraph visualization | Click nodes; advance discovery → classify → evidence → draft → review | Based on real `StateGraph` node ordering |
+| HITL checkpoint | Pause, manually verify source, edit, approve or reject | Models `interrupt()` / `Command(resume=...)` |
+| Checkpoint inspector | Watch the `EditorialState`-style JSON evolve | **Local JavaScript only**, not a real Postgres checkpoint |
+| Event discovery | Select fictional candidates, replay screening and duplicate flags | Follows discovery vs. publication separation |
+| Django publication | Inspect refusal of unreviewed content or a public API response | Publishing occurs only in a separate authenticated Django handler |
+| Code browser | Small LangGraph, review, Django, YAML and JavaScript samples | Real structural snippets, adapted/redacted as marked |
 
-- [Desktop — 1440 × 900](screenshots/production-desktop.png)
-- [Mobile — 390 × 844](screenshots/production-mobile.png)
+**Important limitation:** this GitHub Pages app does **not** execute LangGraph Python, Django, Wagtail, an LLM, PostgreSQL, online event discovery or social publishing. The interactions are deterministic browser simulations using fictional examples. The real application is linked separately.
 
-They appear responsively in the hero and in the expandable screenshot gallery, with links to the original PNG files. Capture provenance is recorded in [screenshots/capture-metadata.json](screenshots/capture-metadata.json) and the [screenshot gallery documentation](docs/production-screenshots.md). Screenshots show the **real public product**, while the surrounding interactive portfolio demo uses **fictional offline data**.
+## Technologies in the real system
 
-To capture updated public screenshots on Windows using `uv`:
+`Python` · `Django` · `Wagtail CMS` · `LangGraph` · `PostgreSQL` · `Next.js` · `GitHub Actions` · `LLM-assisted drafting` · `HITL`
 
-```powershell
-uv run --with playwright python -m playwright install chromium
-uv run --with playwright python tools/capture_public_site.py
-```
-
-Review any new captures before publishing. The helper opens the public homepage only and does not authenticate to a CMS or access production Studio.
-
-## Real source excerpt (selected, non-secret)
-
-The architecture section contains a short excerpt from **backend/news/workflow.py**, with formatting simplified for readability. Additional small samples are in [docs/source-excerpts.md](docs/source-excerpts.md). The real repositories, prompts, database credentials, and operational implementation remain private.
-
-## Features you can interact with
-
-| Section | Interactive demonstration |
-| --- | --- |
-| Portal | Editorial-style homepage and fictional regional events |
-| Event discovery | Query, city/category filtering and example ranking |
-| AI Content Studio | Choose source → simulate draft → edit → mandatory HITL approval/rejection → publication preview + local social copy |
-| Background jobs | Run simulated RSS/event/review/social workflows and view local execution logs |
-| Architecture | Django/Wagtail, LangGraph, PostgreSQL, Next.js, delivery and job boundaries |
-
-**Production-oriented technical scope:** Django, Wagtail, PostgreSQL, Next.js, event discovery, deduplication, background jobs, LangGraph-style orchestration, LLM-assisted drafts, human-in-the-loop controls, and social distribution.
-
-The public demonstration runs on **vanilla JavaScript** so GitHub Pages can host it without Python, a real LLM, source API keys, or database credentials. The stage display simulates a LangGraph **concept**; it is not an actual running LangGraph graph. The real application architecture is described rather than exposed.
-
-## System architecture
+## Architecture and decision boundary
 
 ```mermaid
-flowchart LR
-  SOURCE[RSS / event discovery] --> DJANGO[Django · Wagtail CMS]
-  DJANGO <--> DB[(PostgreSQL)]
-  DJANGO --> LANG[LangGraph workflow]
-  LANG --> DRAFT[Draft / LLM-assisted stage]
-  DRAFT --> REVIEW{Human review}
-  REVIEW -->|revise| DRAFT
-  REVIEW -->|reject| ARCHIVE[Stop / archive]
-  REVIEW -->|approve| PUBLISH[Publish approved content]
-  PUBLISH --> NEXT[Next.js public site]
-  PUBLISH --> SOCIAL[Social content queue]
-  JOBS[Background jobs] --> SOURCE
+flowchart TD
+  A[Unpublished RSS / event candidates] --> B[Django discovery and source checks]
+  B --> C[LangGraph: classify → evidence → draft]
+  C --> D{interrupt / human review}
+  D -->|Reject| E[Stop: no publication]
+  D -->|Approve and verify source| F[Command: resume]
+  F --> G[Authenticated Django publishing handler]
+  G --> H[(PostgreSQL / Wagtail published pages)]
+  H --> I[Public API → Next.js]
+  G --> J[Social copy queue]
+  K[Scheduled discovery job] --> A
 ```
 
-See [architecture notes](docs/architecture.md) and [security boundary](SECURITY.md).
+**Key distinction:** the actual editorial `StateGraph` ends after the human-review decision. Publishing is performed by a separate authenticated Django handler; there is no automatic publishing node in the graph.
 
-## Language policy
+## What is shown and what is private
 
-The public user interface uses **Polish** for the target audience. Technical documentation, source identifiers, code comments, test descriptions, Git commit messages, and architecture notes are in **English**. Fictional editorial content follows the interface language.
+The graph structure is a trimmed source excerpt. The HITL checkpoint and Django snippets are redacted/adapted to omit private integration details. Full prompts, model credentials, production endpoints, internal data schemas and operational source configurations are not included. Candidate records, draft summaries, JSON states and job traces in the interactive demo are fictional.
 
-## Local development
+## Real product reference
+
+Optional Playwright captures of the real public homepage are in `screenshots/production-desktop.png` and `screenshots/production-mobile.png`. They are available only in the collapsed reference section; the portfolio focuses on processes and code.
+
+## Run locally
 
 ```bash
 python -m http.server 8000
-# http://localhost:8000
+# open http://localhost:8000
+node --test tests/*.test.js
 ```
 
-Run tests using `npm test` (Node.js 20+, no dependencies).
+The `pages.yml` workflow tests and deploys this standalone browser demo to GitHub Pages. It does not publish to the real CMS or run any backend automation.
 
-## GitHub Pages deployment
+## Design priorities
 
-1. Create a public repository named `blizej-walencji-demo` under `paulinap92`.
-2. Push the **contents of this directory** to `main`.
-3. Configure **Settings → Pages → Build and deployment → Source: GitHub Actions**.
-4. The workflow in `.github/workflows/pages.yml` validates and publishes the site.
+- Evidence provenance: source discovery is not independent verification.
+- LLM output remains a draft until a human checks it.
+- Checkpointed review is resumable using a stable thread identifier.
+- Approval and publication are distinct security boundaries.
+- No hallucinated event dates or synthetic performance claims are presented as production metrics.
+- English-only engineering presentation, documentation, code comments and commit messages.
 
-No production code, live credentials, internal prompts, source collection strategies, private schemas, authentication or publishing endpoints are exposed.
-
-## Engineering story
-
-The editorial system separates discovery, generation, human approval and publication. A deliberate approval checkpoint prevents unreviewed model output from being treated as published news. The UI helps explain this design to engineering interviewers while keeping operational code private.
+**Portfolio focus:** LangGraph, human-in-the-loop AI, backend integration and operational guardrails, not a copy of the public portal.
